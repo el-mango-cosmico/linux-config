@@ -17,7 +17,7 @@ $character"""
 [os]
 disabled = true
 [os.symbols]
-Macos = "🍎 " 
+Macos = "🥭  " 
 
 [nodejs]
 format = 'via [🤖 $version](bold green) '
