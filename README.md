@@ -36,6 +36,37 @@ A repository for automating the setup and configuration of Arch Linux with custo
     └── utils
 ```
 
+## System Discovery Scripts
+
+Determine the appropriate Arch Linux version to install based on your hardware specifications directly from the repository root:
+
+### For Linux Users
+
+```bash
+# Make the script executable (first-time only)
+chmod +x scripts/determine-arch-ver/linux-os-discovery-updated.sh
+
+# Run the discovery script
+./scripts/determine-arch-ver/linux-os-discovery-updated.sh
+```
+
+### For Windows Users
+
+```powershell
+# Open PowerShell as Administrator
+# You may need to change execution policy
+Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process
+
+# Run the discovery script
+.\scripts\determine-arch-ver\windows-os-discovery-updated.ps1
+```
+
+These scripts analyze your system hardware and provide:
+- An immediate recommendation for which Arch Linux version to install
+- Custom installation notes specific to your hardware
+
+For detailed usage and requirements, refer to `scripts/determine-arch-ver/README.md`.
+
 ## Bootable USB Creation
 
 Create a bootable Arch Linux USB drive directly from the repository root:
@@ -57,10 +88,6 @@ Key features:
 ⚠️ **Warning**: The script will ERASE all data on the selected USB drive.
 
 For detailed usage and requirements, refer to `scripts/bootable-usb/README.md`.
-
-## System Discovery Scripts
-
-The repository includes scripts to analyze your system and recommend the appropriate Arch Linux version to install.
 
 ## Installation Script
 
