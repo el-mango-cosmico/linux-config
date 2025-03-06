@@ -2,6 +2,7 @@
 
 # Arch Linux Bootable USB Creator
 # This script helps create a bootable USB drive for Arch Linux installation
+# and includes the Mango Linux Configuration repository content
 
 # Colors for formatting
 RED='\033[0;31m'
@@ -25,7 +26,7 @@ check_sudo() {
 
 # Function to check if required tools are installed
 check_dependencies() {
-    local deps=("wget" "dd" "grep")
+    local deps=("wget" "dd" "grep" "rsync")
     local missing=()
 
     for dep in "${deps[@]}"; do
@@ -135,11 +136,6 @@ create_bootable_usb() {
         dd if=${usb_drive} bs=512 count=1 | hexdump -C | head -1
         
         echo -e "${GREEN}Bootable USB created successfully!${NC}"
-        echo -e "${YELLOW}To boot from this USB:${NC}"
-        echo -e "1. Restart your computer"
-        echo -e "2. Press the boot menu key (often F12, F11, F9, or Esc depending on your system)"
-        echo -e "3. Select the USB drive from the boot menu"
-        echo -e "${RED}Note: If you still boot into Nobara, check your BIOS settings and boot priority.${NC}"
     else
         echo -e "${RED}Failed to create bootable USB.${NC}"
         exit 1
@@ -229,6 +225,107 @@ EOF
     fi
 }
 
+# Function to copy repository content to USB drive
+copy_repo_to_usb() {
+    local usb_drive="$1"
+    
+    echo -e "${YELLOW}Preparing to copy Mango Linux Configuration repository to USB drive...${NC}"
+    
+    # Find a FAT32 partition on the USB drive that we can write to
+    local data_partition=""
+    local mount_point="/mnt/arch_data_temp"
+    
+    # Create mount point directory if it doesn't exist
+    mkdir -p "$mount_point"
+    
+    # Look for partitions on the USB drive
+    for partition in "${usb_drive}"*; do
+        if [ -b "$partition" ] && [ "$partition" != "$usb_drive" ]; then
+            # Try to mount the partition
+            if mount "$partition" "$mount_point" 2>/dev/null; then
+                # Check if we have write permissions
+                if touch "$mount_point/test_write" 2>/dev/null; then
+                    rm "$mount_point/test_write"
+                    echo -e "${GREEN}Found writable partition: $partition${NC}"
+                    data_partition="$partition"
+                    break
+                fi
+                umount "$mount_point"
+            fi
+        fi
+    done
+    
+    # If no suitable partition is found, we'll create a simple data partition
+    if [ -z "$data_partition" ]; then
+        echo -e "${YELLOW}No writable partition found. Creating a data partition...${NC}"
+        
+        # Get the last partition number
+        local last_part_num=$(ls -1 "${usb_drive}"* | grep -oE '[0-9]+
+    
+    # Set the mount point
+    local mount_point="/mnt/arch_data_temp"
+    
+    # Create a directory for the repository
+    mkdir -p "$mount_point/mango-linux"
+    
+    # Get the script directory (where this script is located)
+    local script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    
+    # Navigate to the root of the repository (assuming the standard structure)
+    local repo_root="$(cd "$script_dir/../.." && pwd)"
+    
+    echo -e "${GREEN}Copying Mango Linux Configuration repository to USB drive...${NC}"
+    echo -e "${YELLOW}Repository source: ${repo_root}${NC}"
+    echo -e "${YELLOW}Destination: ${mount_point}/mango-linux${NC}"
+    
+    # Copy the repository content to the USB drive
+    rsync -av --exclude ".git" "$repo_root/" "$mount_point/mango-linux/"
+    
+    # Create a README file on the USB drive
+    cat > "$mount_point/README.txt" << EOF
+MANGO LINUX CONFIGURATION
+=========================
+
+This USB drive contains:
+1. Arch Linux installation media (boot from this USB to install Arch Linux)
+2. Mango Linux Configuration repository (in the mango-linux directory)
+
+To use the Mango Linux Configuration tools after booting from this USB:
+1. Open a terminal
+2. Navigate to the repository directory:
+   cd /run/media/arch/mango-linux
+   (Note: The actual mount path may vary depending on your system)
+3. Run the installation script:
+   ./install.sh
+
+For more information, see the README.md file in the mango-linux directory.
+EOF
+    
+    # Create a desktop shortcut file on the USB drive
+    mkdir -p "$mount_point/mango-linux/launcher"
+    cat > "$mount_point/mango-linux/launcher/mango-linux-install.desktop" << EOF
+[Desktop Entry]
+Type=Application
+Terminal=true
+Name=Mango Linux Install
+Comment=Launch Mango Linux Installation
+Exec=bash -c "cd \$(dirname \$(readlink -f %k))/.. && ./install.sh"
+Icon=system-software-install
+Categories=System;
+EOF
+    
+    # Make the desktop file executable
+    chmod +x "$mount_point/mango-linux/launcher/mango-linux-install.desktop"
+    
+    # Sync and unmount
+    sync
+    umount "$mount_point"
+    rmdir "$mount_point"
+    
+    echo -e "${GREEN}Repository successfully copied to USB drive!${NC}"
+    echo -e "${GREEN}You can now access the Mango Linux Configuration repository from the USB drive.${NC}"
+}
+
 # Main script execution
 main() {
     # Check for sudo privileges
@@ -250,7 +347,7 @@ main() {
     echo "     \\ \\_______\\   \\ \\__\\/\\__\\ \\__\\/\\__\\ \\__\\    \\ \\__\\     \\ \\__\\/\\__\\    \\ \\_______\\ \\_______\\"
     echo "      \\|_______|    \\|__/\\|__/\\|__/\\|__/\\|__|     \\|__|      \\|__/\\|__|     \\|_______/\\|_______|"
     echo -e "${NC}"
-    echo -e "${YELLOW}Arch Linux USB Creator - MIT Mirror Edition${NC}"
+    echo -e "${YELLOW}Arch Linux USB Creator - Mango Linux Configuration Edition${NC}"
     echo -e "${GREEN}Using Arch Linux version: ${ARCH_VERSION}${NC}"
     echo ""
 
@@ -272,6 +369,9 @@ main() {
     # Create boot helper information on the USB
     create_boot_helper "${usb_drive}"
     
+    # Copy repository content to the USB drive
+    copy_repo_to_usb "${usb_drive}"
+    
     echo -e "\n${YELLOW}=== BOOT INSTRUCTIONS ===${NC}"
     echo -e "${GREEN}To boot from this USB drive:${NC}"
     echo -e "1. Restart your computer"
@@ -284,10 +384,163 @@ main() {
     echo -e "   - MSI: F11"
     echo -e "   - Apple Mac: Hold Option/Alt key"
     echo -e "3. Select the USB drive from the boot menu"
-    echo -e "\n${YELLOW}If your system boots into Nobara instead of Arch:${NC}"
-    echo -e "• Check that Secure Boot is disabled in BIOS/UEFI"
-    echo -e "• Verify boot priority in BIOS/UEFI settings"
-    echo -e "• Try a different USB port (preferably USB 2.0)\n"
+    echo -e "\n${YELLOW}To access Mango Linux Configuration:${NC}"
+    echo -e "• After booting into Arch Linux, mount the USB drive"
+    echo -e "• Navigate to the mango-linux folder on the USB"
+    echo -e "• Run ./install.sh to access all Mango Linux tools\n"
+    
+    # Clean up the ISO file after successful USB creation
+    cleanup_iso "$iso_filename"
+}
+
+# Run the main function
+main
+ | sort -n | tail -1)
+        
+        # Create a new simple partition at the end of the drive
+        parted -s "$usb_drive" mkpart primary ext4 100% 100%
+        
+        # Get the new partition name
+        if [[ "$usb_drive" == *"nvme"* ]]; then
+            data_partition="${usb_drive}p$((last_part_num + 1))"
+        else
+            data_partition="${usb_drive}$((last_part_num + 1))"
+        fi
+        
+        # Format the partition as ext4
+        echo -e "${YELLOW}Formatting data partition as ext4...${NC}"
+        mkfs.ext4 -F "$data_partition"
+        
+        # Mount the new partition
+        mount "$data_partition" "$mount_point"
+    fi
+    
+    # Set the mount point
+    local mount_point="/mnt/arch_data_temp"
+    
+    # Create a directory for the repository
+    mkdir -p "$mount_point/mango-linux"
+    
+    # Get the script directory (where this script is located)
+    local script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    
+    # Navigate to the root of the repository (assuming the standard structure)
+    local repo_root="$(cd "$script_dir/../.." && pwd)"
+    
+    echo -e "${GREEN}Copying Mango Linux Configuration repository to USB drive...${NC}"
+    echo -e "${YELLOW}Repository source: ${repo_root}${NC}"
+    echo -e "${YELLOW}Destination: ${mount_point}/mango-linux${NC}"
+    
+    # Copy the repository content to the USB drive
+    rsync -av --exclude ".git" "$repo_root/" "$mount_point/mango-linux/"
+    
+    # Create a README file on the USB drive
+    cat > "$mount_point/README.txt" << EOF
+MANGO LINUX CONFIGURATION
+=========================
+
+This USB drive contains:
+1. Arch Linux installation media (boot from this USB to install Arch Linux)
+2. Mango Linux Configuration repository (in the mango-linux directory)
+
+To use the Mango Linux Configuration tools after booting from this USB:
+1. Open a terminal
+2. Navigate to the repository directory:
+   cd /run/media/arch/mango-linux
+   (Note: The actual mount path may vary depending on your system)
+3. Run the installation script:
+   ./install.sh
+
+For more information, see the README.md file in the mango-linux directory.
+EOF
+    
+    # Create a desktop shortcut file on the USB drive
+    mkdir -p "$mount_point/mango-linux/launcher"
+    cat > "$mount_point/mango-linux/launcher/mango-linux-install.desktop" << EOF
+[Desktop Entry]
+Type=Application
+Terminal=true
+Name=Mango Linux Install
+Comment=Launch Mango Linux Installation
+Exec=bash -c "cd \$(dirname \$(readlink -f %k))/.. && ./install.sh"
+Icon=system-software-install
+Categories=System;
+EOF
+    
+    # Make the desktop file executable
+    chmod +x "$mount_point/mango-linux/launcher/mango-linux-install.desktop"
+    
+    # Sync and unmount
+    sync
+    umount "$mount_point"
+    rmdir "$mount_point"
+    
+    echo -e "${GREEN}Repository successfully copied to USB drive!${NC}"
+    echo -e "${GREEN}You can now access the Mango Linux Configuration repository from the USB drive.${NC}"
+}
+
+# Main script execution
+main() {
+    # Check for sudo privileges
+    check_sudo
+    
+    # Check for required dependencies
+    check_dependencies
+
+    # Clear screen
+    clear
+
+    # ASCII Art Header
+    echo -e "${GREEN}"
+    echo "   ___             _______  ___  ___  _______   _________  ___  ___       _______  _______   "
+    echo "  |\\  \\           /\\   _  \\/\\  \\/\\  \\/\\   _  \\ /\\   _____\\/\\  \\/\\  \\     /\\   _  \\/\\   __  \\ "
+    echo "  \\ \\  \\         /  \\  \\L\\ \\ \\  \\_\\  \\ \\  \\L\\ \\\\ \\  \\__/\\_\\ \\  \\\\\\  \\    \\ \\  \\L\\ \\ \\  \\/\\  \\"
+    echo "   \\ \\  \\        \\ \\   __  \\ \\  __  \\ \\   __/ \\ \\  \\  \\|_|\\ \\   __  \\    \\ \\   __\\ \\  \\\\\\  \\"
+    echo "    \\ \\  \\____    \\ \\  \\/\\  \\ \\  \\/\\  \\ \\  \\/   \\ \\  \\     \\ \\  \\/\\  \\    \\ \\  \\_|\\ \\  \\_\\  \\"
+    echo "     \\ \\_______\\   \\ \\__\\/\\__\\ \\__\\/\\__\\ \\__\\    \\ \\__\\     \\ \\__\\/\\__\\    \\ \\_______\\ \\_______\\"
+    echo "      \\|_______|    \\|__/\\|__/\\|__/\\|__/\\|__|     \\|__|      \\|__/\\|__|     \\|_______/\\|_______|"
+    echo -e "${NC}"
+    echo -e "${YELLOW}Arch Linux USB Creator - Mango Linux Configuration Edition${NC}"
+    echo -e "${GREEN}Using Arch Linux version: ${ARCH_VERSION}${NC}"
+    echo ""
+
+    # List available USB drives
+    list_usb_drives
+
+    # Prompt for USB drive
+    read -p "Enter the USB drive path (e.g., /dev/sdb): " usb_drive
+
+    # Store the ISO filename
+    local iso_filename="archlinux-${ARCH_VERSION}-x86_64.iso"
+    
+    # Download ISO from MIT mirror
+    download_iso
+
+    # Create bootable USB
+    create_bootable_usb "$iso_filename" "${usb_drive}"
+    
+    # Create boot helper information on the USB
+    create_boot_helper "${usb_drive}"
+    
+    # Copy repository content to the USB drive
+    copy_repo_to_usb "${usb_drive}"
+    
+    echo -e "\n${YELLOW}=== BOOT INSTRUCTIONS ===${NC}"
+    echo -e "${GREEN}To boot from this USB drive:${NC}"
+    echo -e "1. Restart your computer"
+    echo -e "2. During startup, press the boot menu key for your system:"
+    echo -e "   - Dell: F12"
+    echo -e "   - HP: F9"
+    echo -e "   - Lenovo: F12 or Fn+F12"
+    echo -e "   - ASUS: F8"
+    echo -e "   - Acer: F12"
+    echo -e "   - MSI: F11"
+    echo -e "   - Apple Mac: Hold Option/Alt key"
+    echo -e "3. Select the USB drive from the boot menu"
+    echo -e "\n${YELLOW}To access Mango Linux Configuration:${NC}"
+    echo -e "• After booting into Arch Linux, mount the USB drive"
+    echo -e "• Navigate to the mango-linux folder on the USB"
+    echo -e "• Run ./install.sh to access all Mango Linux tools\n"
     
     # Clean up the ISO file after successful USB creation
     cleanup_iso "$iso_filename"

@@ -2,11 +2,30 @@
 
 A repository for automating the setup and configuration of Arch Linux with custom tools, settings, and configurations.
 
+## Quick Start
+
+The easiest way to get started is to use the main installation script:
+
+```bash
+# Make the script executable (first-time only)
+chmod +x install.sh
+
+# Run the installation script
+./install.sh
+```
+
+The installation script provides a menu to access all available tools:
+- System Discovery - Determine appropriate Arch Linux version for your hardware
+- Create Bootable USB - Create a bootable Arch Linux USB drive
+- Install Arch Linux - Full Arch Linux installation
+- Setup Root CA - Set up a Root Certificate Authority on YubiKeys
+
 ## Repository Structure
 
 ```
 .
 ├── README.md
+├── install.sh       # Main installation script
 ├── config
 │   ├── git
 │   ├── intellij
@@ -36,11 +55,15 @@ A repository for automating the setup and configuration of Arch Linux with custo
     └── utils
 ```
 
-## System Discovery Scripts
+## Individual Script Usage
 
-Determine the appropriate Arch Linux version to install based on your hardware specifications directly from the repository root:
+If you prefer to run individual scripts directly, you can use the following commands:
 
-### For Linux Users
+### System Discovery Scripts
+
+Determine the appropriate Arch Linux version to install based on your hardware specifications:
+
+#### For Linux Users
 
 ```bash
 # Make the script executable (first-time only)
@@ -50,7 +73,7 @@ chmod +x scripts/determine-arch-ver/linux-os-discovery-updated.sh
 ./scripts/determine-arch-ver/linux-os-discovery-updated.sh
 ```
 
-### For Windows Users
+#### For Windows Users
 
 ```powershell
 # Open PowerShell as Administrator
@@ -67,9 +90,9 @@ These scripts analyze your system hardware and provide:
 
 For detailed usage and requirements, refer to `scripts/determine-arch-ver/README.md`.
 
-## Bootable USB Creation
+### Bootable USB Creation
 
-Create a bootable Arch Linux USB drive directly from the repository root:
+Create a bootable Arch Linux USB drive:
 
 ```bash
 # Make the script executable (first-time only)
@@ -89,9 +112,29 @@ Key features:
 
 For detailed usage and requirements, refer to `scripts/bootable-usb/README.md`.
 
-## Installation Script
+### Installation Script
 
 A comprehensive Arch Linux installation script is provided to automate the setup of a development environment.
+
+```bash
+# Make the script executable (first-time only)
+chmod +x scripts/install/arch-install-script.sh
+
+# Run the installation script
+sudo ./scripts/install/arch-install-script.sh
+```
+
+### Root CA Setup
+
+Set up a Root Certificate Authority with YubiKey support:
+
+```bash
+# Make the script executable (first-time only)
+chmod +x scripts/setup-root-ca/root-ca-setup.sh
+
+# Run the setup script
+./scripts/setup-root-ca/root-ca-setup.sh
+```
 
 ## Future Enhancements
 

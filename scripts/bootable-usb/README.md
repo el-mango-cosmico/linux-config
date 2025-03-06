@@ -2,26 +2,39 @@
 
 ## Overview
 
-A flexible bash script to create a customized bootable Arch Linux USB drive with version and architecture selection.
+A modular bash script system to create a customized bootable Arch Linux USB drive with version and architecture selection, including integrated Mango Linux Configuration.
 
 ## Features
 
+- Modular architecture for easier maintenance
 - Select specific Arch Linux version
-- Choose CPU architecture (x86_64, ARM64, ARM32)
 - Automatically downloads selected ISO
-- Verifies ISO integrity using GPG
 - Lists available USB drives
 - Creates a bootable USB drive
+- Integrates Mango Linux Configuration for use in live environment
+- Provides desktop shortcuts for easy access
+
+## Directory Structure
+
+```
+scripts/bootable-usb/
+├── arch-usb-creator.sh        # Main script
+├── live-env-setup.sh          # Script for live environment integration
+├── modules/                   # Modular components
+│   ├── check_dependencies.sh  # Dependency checking
+│   ├── disk_operations.sh     # USB drive operations
+│   ├── iso_handling.sh        # ISO download and verification
+│   └── repo_integration.sh    # Repository integration
+└── README.md                  # This documentation
+```
 
 ## Prerequisites
 
 ### Software Dependencies
 - wget
-- gpg
 - dd
-- lsblk
-- curl
 - grep
+- rsync
 
 ### Recommended System
 - Any Linux distribution
@@ -41,43 +54,30 @@ A flexible bash script to create a customized bootable Arch Linux USB drive with
    ```
 
 3. Interactive Prompts
-   - Select Arch Linux version (including latest)
-   - Choose CPU architecture:
-     - x86_64 (Most common, 64-bit Intel/AMD)
-     - ARM64 (ARM 64-bit)
-     - ARM32 (ARM 32-bit)
    - Select target USB drive
    - Confirm USB drive selection
+   - Choose whether to keep the ISO file
 
-## Example Workflow
+## Live Environment Integration
 
-```
-Arch Linux USB Creator
-----------------------------------------
-Available Arch Linux Versions:
-0) Latest version
-1) 2024.01.01
-2) 2023.12.01
-...
+The created USB drive includes functionality to copy the Mango Linux Configuration repository to the home directory when booting from the live environment.
 
-Select Arch Linux version (0-X): 0
+### Automatic Integration
 
-Available CPU Architectures:
-1) x86_64 (Most common, 64-bit Intel/AMD)
-2) arm64 (ARM 64-bit)
-3) armv7 (ARM 32-bit)
+When booting from the Arch Linux live environment, the system will:
+1. Look for the Mango Linux Configuration USB drive
+2. Copy the repository to the home directory
+3. Create a desktop shortcut for easy access
 
-Select CPU Architecture (1-3): 1
+### Manual Integration
 
-Available USB Drives:
-NAME   SIZE   MODEL
-/dev/sdb  16G   SanDisk Cruzer
-
-Enter the USB drive device (e.g., /dev/sdb): /dev/sdb
-
-WARNING: ALL DATA ON /dev/sdb WILL BE ERASED!
-Are you sure you want to continue? (y/n): y
-```
+If automatic integration doesn't work:
+1. Boot from the Arch Linux USB
+2. Open a terminal
+3. Run the following command:
+   ```bash
+   sudo /run/media/arch/*/mango-linux/live-env-setup.sh
+   ```
 
 ## Warning
 
@@ -86,14 +86,14 @@ Are you sure you want to continue? (y/n): y
 - Ensure you have backed up any important data on the USB drive
 - Carefully select the correct USB drive when prompted
 
+## Customization
+
+- To change the Arch Linux version, edit the `ARCH_VERSION` variable in `arch-usb-creator.sh`
+- To modify the repository integration process, edit the `copy_repo_to_usb` function in `modules/repo_integration.sh`
+
 ## Troubleshooting
 
 - Ensure all dependencies are installed
 - Check internet connection
 - Verify USB drive is properly connected
 - Run script with sufficient permissions (sudo)
-- Verify GPG key if signature verification fails
-
-## License
-
-MIT License
