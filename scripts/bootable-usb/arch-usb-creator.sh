@@ -14,7 +14,7 @@ NC='\033[0m' # No Color
 MIT_MIRROR="https://mirrors.mit.edu/archlinux/iso/"
 
 # Hardcoded Arch version - can be easily changed here
-ARCH_VERSION="2025.01.01"
+ARCH_VERSION="2025.04.01"
 
 # Function to check if script is run with sudo
 check_sudo() {
