@@ -1,0 +1,39 @@
+# Package Management
+alias take_off='echo "🚀 Taking off... Updating all packages" && echo "Updating pacman packages..." && sudo pacman -Syu; echo "Updating AUR packages..." && yay -Syu --noconfirm; echo "Updating Flatpaks..." && flatpak update -y; echo "🎯 All updates complete! Ready for takeoff!"'
+
+# Shell Management
+alias reload='source ~/.zshrc && echo "🚀 Systems reloaded! Ready for launch!"'
+
+# =============================================================================
+# MACHINE-SPECIFIC ALIASES
+# =============================================================================
+# Aliases below are specific to certain machines (game server, home lab, etc.)
+# and are committed intentionally for reference.
+#
+# For aliases you DON'T want in the repo (secrets, personal shortcuts):
+#   → Add them to ~/.zsh_aliases_local (git-ignored, auto-sourced at the bottom)
+#
+# TODO: Consider splitting these into per-machine files if this list grows:
+#   modules/dotfiles/config/.zsh_aliases_palworld
+#   modules/dotfiles/config/.zsh_aliases_homelab
+# =============================================================================
+
+# Update palworld server
+alias pal-update='sudo -u pwserver bash -c "cd /home/pwserver && echo \"🛑 Stopping server...\" && ./pwserver stop && echo \"⬇️ Updating server...\" && ./pwserver update && echo \"🚀 Starting server...\" && ./pwserver start && echo \"✅ Done!\" "'
+
+# Stop palworld server
+alias pal-stop='sudo -u pwserver bash -c "cd /home/pwserver && echo \"🛑 Stopping server...\" && ./pwserver stop && echo \"✅ Server stopped!\" "'
+
+# Start palworld server
+alias pal-start='sudo -u pwserver bash -c "cd /home/pwserver && echo \"🚀 Starting server...\" && ./pwserver start && echo \"✅ Server started!\" "'
+
+# Docker compatibility (using Podman)
+alias docker=podman
+alias docker-compose=podman-compose
+
+# K3s quick aliases
+alias k3s-up='echo "Starting k3s..." && sudo systemctl start k3s && systemctl --no-pager --lines=0 status k3s'
+alias k3s-down='echo "Stopping k3s..." && sudo systemctl stop k3s'
+
+# Local/machine-specific aliases (git-ignored)
+[ -f ~/.zsh_aliases_local ] && source ~/.zsh_aliases_local

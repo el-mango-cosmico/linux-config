@@ -1,0 +1,75 @@
+# Starship configuration
+format = """
+[](#9A348E)\
+$username\
+[](bg:#DA627D fg:#9A348E)\
+$directory\
+[](fg:#DA627D bg:#FCA17D)\
+$git_branch\
+$git_status\
+[](fg:#FCA17D bg:#86BBD8)\
+$python\
+$rust\
+$golang\
+$nodejs\
+[](fg:#86BBD8 bg:#06969A)\
+$docker_context\
+[](fg:#06969A bg:#33658A)\
+$time\
+[ ](fg:#33658A)\
+"""
+
+# Disable the blank line at the start of the prompt
+add_newline = false
+
+[username]
+show_always = true
+style_user = "bg:#9A348E fg:#FFFFFF"
+style_root = "bg:#9A348E fg:#FFFFFF"
+format = '[$user ]($style)'
+
+[directory]
+style = "bg:#DA627D fg:#FFFFFF"
+format = "[ $path ]($style)"
+truncation_length = 3
+truncation_symbol = "…/"
+
+[git_branch]
+symbol = ""
+style = "bg:#FCA17D fg:#000000"
+format = '[ $symbol $branch ]($style)'
+
+[git_status]
+style = "bg:#FCA17D fg:#000000"
+format = '[$all_status$ahead_behind ]($style)'
+
+[python]
+symbol = " "
+style = "bg:#86BBD8 fg:#000000"
+format = '[ $symbol ($version) ]($style)'
+
+[rust]
+symbol = " "
+style = "bg:#86BBD8 fg:#000000"
+format = '[ $symbol ($version) ]($style)'
+
+[golang]
+symbol = " "
+style = "bg:#86BBD8 fg:#000000"
+format = '[ $symbol ($version) ]($style)'
+
+[nodejs]
+symbol = " "
+style = "bg:#86BBD8 fg:#000000"
+format = '[ $symbol ($version) ]($style)'
+
+[docker_context]
+symbol = " "
+style = "bg:#06969A fg:#FFFFFF"
+format = '[ $symbol $context ]($style)'
+
+[time]
+disabled = false
+time_format = "%R" # Hour:Minute Format
+style = "bg:#33658A fg:#FFFFFF"
+format = '[ $time ]($style)'

@@ -1,35 +1,30 @@
 #!/bin/bash
-
 # Mango Linux Configuration - Main Installation Script
-# This script serves as the central entrypoint for all Mango Linux configuration options
 
-# Colors for formatting
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/lib/common.sh"
 
-# Function to check if script is run with sufficient permissions
+# ─── Legacy helpers (kept for backward compat with existing scripts) ──────────
+
 check_permissions() {
     if [[ $1 == "root" && "$(id -u)" -ne 0 ]]; then
-        echo -e "${RED}This option requires root privileges. Please run with sudo.${NC}"
+        log_error "This option requires root privileges. Please run with sudo."
         exit 1
     fi
 }
 
-# Function to make scripts executable
 make_executable() {
     local script_path="$1"
     if [ -f "$script_path" ]; then
         chmod +x "$script_path"
     else
-        echo -e "${RED}Script not found: $script_path${NC}"
+        log_error "Script not found: $script_path"
         exit 1
     fi
 }
 
-# Display ASCII art header
+# ─── Header ───────────────────────────────────────────────────────────────────
+
 display_header() {
     clear
     echo -e "${GREEN}"
@@ -41,135 +36,138 @@ display_header() {
     echo "                   /____/                                      "
     echo -e "${NC}"
     echo -e "${YELLOW}Mango Linux Configuration - Installation Manager${NC}"
-    echo -e "${BLUE}A repository for automating the setup and configuration of Arch Linux${NC}"
+    echo -e "${BLUE}Arch Linux setup and configuration automation${NC}"
     echo "-----------------------------------------------------------------------"
 }
 
-# Function to run system discovery script
-run_system_discovery() {
-    echo -e "\n${BLUE}=== System Discovery ===${NC}"
-    echo -e "This will analyze your system and recommend the appropriate Arch Linux version.\n"
+# ─── Legacy script runners ────────────────────────────────────────────────────
 
+run_system_discovery() {
+    log_section "System Discovery"
     local os_type="$(uname -s)"
     if [[ "$os_type" == "Linux" ]]; then
-        make_executable "scripts/determine-arch-ver/linux-os-discovery-updated.sh"
-        ./scripts/determine-arch-ver/linux-os-discovery-updated.sh
-    elif [[ "$os_type" == "MINGW"* ]] || [[ "$os_type" == "MSYS"* ]] || [[ "$os_type" == "CYGWIN"* ]]; then
-        echo -e "${YELLOW}Windows detected. Running PowerShell script...${NC}"
-        powershell.exe -ExecutionPolicy Bypass -File scripts/determine-arch-ver/windows-os-discovery-updated.ps1
+        make_executable "$SCRIPT_DIR/scripts/determine-arch-ver/linux-os-discovery-updated.sh"
+        bash "$SCRIPT_DIR/scripts/determine-arch-ver/linux-os-discovery-updated.sh"
+    elif [[ "$os_type" == MINGW* ]] || [[ "$os_type" == MSYS* ]] || [[ "$os_type" == CYGWIN* ]]; then
+        powershell.exe -ExecutionPolicy Bypass -File "$SCRIPT_DIR/scripts/determine-arch-ver/windows-os-discovery-updated.ps1"
     else
-        echo -e "${RED}Unsupported operating system: $os_type${NC}"
-        echo -e "${YELLOW}Please manually run one of the following scripts:${NC}"
-        echo -e "- scripts/determine-arch-ver/linux-os-discovery-updated.sh (for Linux)"
-        echo -e "- scripts/determine-arch-ver/windows-os-discovery-updated.ps1 (for Windows)"
+        log_error "Unsupported OS: $os_type"
     fi
 }
 
-# Function to create bootable USB
 create_bootable_usb() {
-    echo -e "\n${BLUE}=== Create Bootable USB ===${NC}"
-    echo -e "This will create a bootable Arch Linux USB drive.\n"
-    
+    log_section "Create Bootable USB"
     check_permissions "root"
-    make_executable "scripts/bootable-usb/arch-usb-creator.sh"
-    
-    ./scripts/bootable-usb/arch-usb-creator.sh
+    make_executable "$SCRIPT_DIR/scripts/bootable-usb/arch-usb-creator.sh"
+    bash "$SCRIPT_DIR/scripts/bootable-usb/arch-usb-creator.sh"
 }
 
-# Function to install Arch Linux
 install_arch_linux() {
-    echo -e "\n${BLUE}=== Install Arch Linux ===${NC}"
-    echo -e "This will install Arch Linux with a development environment.\n"
-    
+    log_section "Install Arch Linux"
     check_permissions "root"
-    make_executable "scripts/install/arch-install-script.sh"
-    
-    echo -e "${YELLOW}WARNING: This script should be run from the Arch Linux live environment.${NC}"
-    read -p "Are you currently booted into the Arch Linux live environment? (y/n): " confirm
-    if [[ "$confirm" == "y" || "$confirm" == "Y" ]]; then
-        ./scripts/install/arch-install-script.sh
+    make_executable "$SCRIPT_DIR/scripts/install/arch-install-script.sh"
+    log_warn "This script must be run from the Arch Linux live environment."
+    if confirm "Are you booted into the Arch live environment?"; then
+        bash "$SCRIPT_DIR/scripts/install/arch-install-script.sh"
     else
-        echo -e "${RED}Installation aborted. Please boot into the Arch Linux live environment first.${NC}"
+        log_error "Aborted. Boot into the live environment first."
     fi
 }
 
-# Function to setup root CA
 setup_root_ca() {
-    echo -e "\n${BLUE}=== Setup Root CA ===${NC}"
-    echo -e "This will set up a Root Certificate Authority on YubiKeys.\n"
-    
-    make_executable "scripts/setup-root-ca/root-ca-setup.sh"
-    
-    # Check if required tools are installed
+    log_section "Setup Root CA"
+    make_executable "$SCRIPT_DIR/scripts/setup-root-ca/root-ca-setup.sh"
     if ! command -v ykman &>/dev/null || ! command -v openssl &>/dev/null; then
-        echo -e "${RED}Required tools not found. Please install 'yubikey-manager' and 'openssl'.${NC}"
-        read -p "Do you want to install the required packages? (y/n): " install_confirm
-        if [[ "$install_confirm" == "y" || "$install_confirm" == "Y" ]]; then
-            # Detect package manager and install
-            if command -v apt &>/dev/null; then
-                sudo apt update && sudo apt install -y yubikey-manager openssl
-            elif command -v dnf &>/dev/null; then
-                sudo dnf install -y yubikey-manager openssl
-            elif command -v pacman &>/dev/null; then
-                sudo pacman -S --noconfirm yubikey-manager openssl
-            else
-                echo -e "${RED}Unable to install packages. Please install manually.${NC}"
-                exit 1
-            fi
+        log_warn "Required tools missing: yubikey-manager, openssl"
+        if confirm "Install them now?"; then
+            install_pkg yubikey-manager
+            install_pkg openssl
         else
-            echo -e "${YELLOW}Aborting setup. Please install the required tools manually.${NC}"
-            exit 1
+            log_error "Aborted."
+            return 1
         fi
     fi
-    
-    ./scripts/setup-root-ca/root-ca-setup.sh
+    bash "$SCRIPT_DIR/scripts/setup-root-ca/root-ca-setup.sh"
 }
 
-# Main function
+# ─── Module auto-discovery ────────────────────────────────────────────────────
+
+declare -a MODULE_NAMES=()
+declare -a MODULE_DESCS=()
+declare -a MODULE_PATHS=()
+
+load_modules() {
+    for module_file in "$SCRIPT_DIR/modules"/*/module.sh; do
+        [[ -f "$module_file" ]] || continue
+        # Source in a subshell to read metadata without polluting current env
+        MODULE_NAME=""
+        MODULE_DESC=""
+        # shellcheck disable=SC1090
+        source "$module_file"
+        if [[ -n "$MODULE_NAME" ]]; then
+            MODULE_NAMES+=("$MODULE_NAME")
+            MODULE_DESCS+=("$MODULE_DESC")
+            MODULE_PATHS+=("$module_file")
+        fi
+    done
+}
+
+run_module() {
+    local idx="$1"
+    local module_file="${MODULE_PATHS[$idx]}"
+    MODULE_NAME="" MODULE_DESC=""
+    # shellcheck disable=SC1090
+    source "$module_file"
+    module_run
+}
+
+# ─── Main menu ────────────────────────────────────────────────────────────────
+
 main() {
-    display_header
-    
-    echo -e "\nPlease select an option:"
-    echo -e "1) ${BLUE}System Discovery${NC} - Determine appropriate Arch Linux version"
-    echo -e "2) ${BLUE}Create Bootable USB${NC} - Create bootable Arch Linux USB drive"
-    echo -e "3) ${BLUE}Install Arch Linux${NC} - Full Arch Linux installation"
-    echo -e "4) ${BLUE}Setup Root CA${NC} - Set up a Root Certificate Authority"
-    echo -e "0) ${BLUE}Exit${NC}"
-    
-    read -p "Enter your choice [0-4]: " choice
-    
-    case $choice in
-        1)
-            run_system_discovery
-            ;;
-        2)
-            create_bootable_usb
-            ;;
-        3)
-            install_arch_linux
-            ;;
-        4)
-            setup_root_ca
-            ;;
-        0)
-            echo -e "${GREEN}Exiting. Goodbye!${NC}"
-            exit 0
-            ;;
-        *)
-            echo -e "${RED}Invalid option. Please try again.${NC}"
-            main
-            ;;
-    esac
-    
-    # Ask if user wants to return to main menu
-    echo -e "\n"
-    read -p "Return to main menu? (y/n): " return_menu
-    if [[ "$return_menu" == "y" || "$return_menu" == "Y" ]]; then
-        main
-    else
-        echo -e "${GREEN}Exiting. Goodbye!${NC}"
-    fi
+    load_modules
+
+    while true; do
+        display_header
+
+        echo -e "\n${BOLD}System Setup${NC}"
+        echo "  1) System Discovery  — determine appropriate Arch version"
+        echo "  2) Create Bootable USB"
+        echo "  3) Install Arch Linux"
+        echo "  4) Setup Root CA (YubiKey)"
+
+        if [[ ${#MODULE_NAMES[@]} -gt 0 ]]; then
+            echo -e "\n${BOLD}Modules${NC}"
+            local i
+            for i in "${!MODULE_NAMES[@]}"; do
+                local num=$(( i + 5 ))
+                printf "  %d) %-20s — %s\n" "$num" "${MODULE_NAMES[$i]}" "${MODULE_DESCS[$i]}"
+            done
+        fi
+
+        echo ""
+        echo "  0) Exit"
+        echo ""
+        read -rp "$(echo -e "${YELLOW}Choice: ${NC}")" choice
+
+        case "$choice" in
+            1) run_system_discovery ;;
+            2) create_bootable_usb ;;
+            3) install_arch_linux ;;
+            4) setup_root_ca ;;
+            0) echo -e "${GREEN}Goodbye!${NC}"; exit 0 ;;
+            *)
+                local module_idx=$(( choice - 5 ))
+                if [[ $module_idx -ge 0 && $module_idx -lt ${#MODULE_NAMES[@]} ]]; then
+                    run_module "$module_idx"
+                else
+                    log_error "Invalid choice."
+                fi
+                ;;
+        esac
+
+        echo ""
+        confirm "Return to main menu?" "y" || { echo -e "${GREEN}Goodbye!${NC}"; exit 0; }
+    done
 }
 
-# Run main function
 main

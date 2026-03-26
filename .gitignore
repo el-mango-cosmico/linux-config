@@ -31,3 +31,4 @@ logs/*.log
 Network Trash Folder
 Temporary Items
 .apdisk
+.zsh_aliases_local
