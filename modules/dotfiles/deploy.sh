@@ -20,5 +20,17 @@ for src_rel in "${!FILES[@]}"; do
     deploy_file "$CONFIG_DIR/$src_rel" "${FILES[$src_rel]}"
 done
 
+# Prompt for git identity if .gitconfig was linked and email is still a placeholder
+if grep -q "YOUR_EMAIL_HERE" "$HOME/.gitconfig" 2>/dev/null; then
+    log_section "Git identity"
+    log_warn ".gitconfig has a placeholder email — let's fill it in now."
+    read -rp "$(echo -e "${YELLOW}Git email: ${NC}")" git_email
+    read -rp "$(echo -e "${YELLOW}Git name [mango]: ${NC}")" git_name
+    git_name="${git_name:-mango}"
+    git config --global user.email "$git_email"
+    git config --global user.name "$git_name"
+    log_success "Git identity set: $git_name <$git_email>"
+fi
+
 log_section "Done"
 echo -e "${GREEN}Dotfiles deployed. Reload your shell with: source ~/.zshrc${NC}"
