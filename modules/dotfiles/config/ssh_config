@@ -1,0 +1,5 @@
+Host thecitadel
+    SetEnv TERM=xterm-256color
+
+Host garden-k3s
+    SetEnv TERM=xterm-256color

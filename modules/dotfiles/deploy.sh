@@ -14,6 +14,7 @@ declare -A FILES=(
     [".zsh_aliases"]="$HOME/.zsh_aliases"
     [".gitconfig"]="$HOME/.gitconfig"
     ["starship.toml"]="$HOME/.config/starship.toml"
+    ["ssh_config"]="$HOME/.ssh/config"
 )
 
 for src_rel in "${!FILES[@]}"; do
