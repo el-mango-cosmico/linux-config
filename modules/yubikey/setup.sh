@@ -152,7 +152,49 @@ cmd_pam_u2f() {
     done
 }
 
-cmd_ssh_fido2(){ log_warn "SSH FIDO2: not yet implemented"; }
+cmd_ssh_fido2() {
+    log_section "SSH FIDO2 Setup"
+    install_pkg libfido2
+    install_pkg openssh
+
+    local key_name
+    read -rp "$(echo -e "${YELLOW}Key filename (default: id_ed25519_sk): ${NC}")" key_name
+    key_name="${key_name:-id_ed25519_sk}"
+    local key_path="$HOME/.ssh/$key_name"
+
+    mkdir -p "$HOME/.ssh"
+    chmod 700 "$HOME/.ssh"
+
+    if [[ -f "$key_path" ]]; then
+        if ! confirm "Key $key_path already exists. Overwrite?" "n"; then
+            log_warn "Skipped."; return
+        fi
+        rm -f "$key_path" "${key_path}.pub"
+    fi
+
+    log_info "Insert your YubiKey. You will be prompted to touch it..."
+    ssh-keygen -t ed25519-sk -O resident -f "$key_path"
+    chmod 600 "$key_path"
+
+    log_success "Key generated: $key_path"
+    echo ""
+    log_info "Your public key (add this to GitHub / server authorized_keys):"
+    cat "${key_path}.pub"
+    echo ""
+    log_info "To load the resident key on a new machine: ssh-keygen -K"
+
+    if confirm "Add IdentityFile entry to ~/.ssh/config?"; then
+        local config="$HOME/.ssh/config"
+        touch "$config"
+        chmod 600 "$config"
+        if ! grep -qF "IdentityFile $key_path" "$config" 2>/dev/null; then
+            printf '\nHost *\n    IdentityFile %s\n' "$key_path" >> "$config"
+            log_success "Added to ~/.ssh/config"
+        else
+            log_info "Already present in ~/.ssh/config"
+        fi
+    fi
+}
 cmd_gpg()      { log_warn "GPG: not yet implemented"; }
 
 show_menu() {
