@@ -69,6 +69,10 @@ _pull_ssh_key() {
 
     local filename=""
     read -rp "$(echo -e "${YELLOW}Save as ~/.ssh/: ${NC}")" filename
+    if [[ -z "$filename" ]]; then
+        log_error "Filename cannot be empty."
+        return 0
+    fi
     local key_path="$HOME/.ssh/$filename"
 
     mkdir -p "$HOME/.ssh"
@@ -105,6 +109,10 @@ _pull_env_file() {
     local dest_path=""
     read -rp "$(echo -e "${YELLOW}Save to path (e.g. ~/.env): ${NC}")" dest_path
     dest_path="${dest_path/#\~/$HOME}"
+    if [[ -z "$dest_path" ]]; then
+        log_error "Destination path cannot be empty."
+        return 0
+    fi
 
     mkdir -p "$(dirname "$dest_path")"
     printf '%s\n' "$notes" > "$dest_path"
@@ -118,7 +126,8 @@ show_pull_menu() {
         echo "  1) SSH private key"
         echo "  2) Environment file (secure note)"
         echo "  0) Done"
-        read -rp "$(echo -e "${YELLOW}Choice: ${NC}")" choice
+        local choice=""
+        read -rp "$(echo -e "${YELLOW}Choice: ${NC}")" choice || true
         case "$choice" in
             1) _pull_ssh_key ;;
             2) _pull_env_file ;;
