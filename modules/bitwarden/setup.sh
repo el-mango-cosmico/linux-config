@@ -37,14 +37,14 @@ cmd_login() {
 
         if [[ "$use_otp" == "y" ]]; then
             log_info "You will be prompted for your password, then touch your YubiKey for the OTP."
-            BW_SESSION=$(bw login "$email" --method 3 --raw)
+            BW_SESSION=$(bw login "$email" --method 3 --raw) || true
         else
-            BW_SESSION=$(bw login "$email" --raw)
+            BW_SESSION=$(bw login "$email" --raw) || true
         fi
     else
         # Already logged in (locked or unlocked) — just unlock
         log_info "Already logged in. Unlocking vault..."
-        BW_SESSION=$(bw unlock --raw)
+        BW_SESSION=$(bw unlock --raw) || true
     fi
 
     if [[ -z "$BW_SESSION" ]]; then
