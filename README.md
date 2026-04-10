@@ -1,154 +1,82 @@
 # Mango Linux Configuration
 
-A repository for automating the setup and configuration of Arch Linux with custom tools, settings, and configurations.
+Arch Linux setup and configuration automation — dotfiles, modules, and utility scripts.
 
 ## Quick Start
 
-The easiest way to get started is to use the main installation script:
-
 ```bash
-# Make the script executable (first-time only)
-chmod +x install.sh
-
-# Run the installation script
+git clone <repo-url> ~/Repos/linux-config
+cd ~/Repos/linux-config
 ./install.sh
 ```
 
-The installation script provides a menu to access all available tools:
-- System Discovery - Determine appropriate Arch Linux version for your hardware
-- Create Bootable USB - Create a bootable Arch Linux USB drive
-- Install Arch Linux - Full Arch Linux installation
-- Setup Root CA - Set up a Root Certificate Authority on YubiKeys
+`install.sh` presents a menu. Select any module or utility to run it.
 
-## Repository Structure
+## Modules
 
-```
-.
-├── README.md
-├── install.sh       # Main installation script
-├── config
-│   ├── git
-│   ├── intellij
-│   ├── kde
-│   ├── neovim
-│   ├── starship
-│   └── zsh
-├── docs
-│   ├── customization
-│   ├── installation
-│   └── troubleshooting
-├── dotfiles
-└── scripts
-    ├── bootable-usb
-    │   ├── README.md                # Documentation for USB creation scripts
-    │   └── arch-usb-creator.sh      # Script for creating bootable Arch Linux USB drives
-    ├── determine-arch-ver
-    │   ├── linux-os-discovery-updated.sh    # System info discovery for Linux
-    │   ├── README.md                # Detailed instructions for discovery scripts
-    │   └── windows-os-discovery-updated.ps1 # System info discovery for Windows
-    ├── install
-    │   ├── README.md                # Documentation for Arch Linux installation script
-    │   └── arch-install-script.sh   # Comprehensive Arch Linux installation script
-    ├── post-install
-    ├── setup-root-ca
-    │   └── root-ca-setup.sh
-    └── utils
+Modules live in `modules/` and are auto-discovered by `install.sh`.
+
+| Module | What it does | Run standalone |
+|--------|-------------|----------------|
+| `dotfiles` | Symlinks shell, git, and prompt config | `bash modules/dotfiles/deploy.sh` |
+| `nvim` | Installs Neovim with LazyVim, LSPs, and AI plugins | `bash modules/nvim/setup.sh` |
+| `kde` | Backs up / restores KDE Plasma settings | `bash modules/kde/backup.sh` or `restore.sh` |
+| `yubikey` | PAM U2F auth, SSH FIDO2 key, GPG / git signing | `bash modules/yubikey/setup.sh` |
+| `bitwarden` | Install bw CLI, unlock with YubiKey OTP, pull SSH keys + env files | `bash modules/bitwarden/setup.sh` |
+
+## YubiKey Setup
+
+The `yubikey` module covers three independent flows — run any or all:
+
+**PAM U2F** — touch your YubiKey instead of typing a password for `sudo` and login:
+```bash
+bash modules/yubikey/setup.sh
+# Choose: 1) PAM U2F → 1) Register a YubiKey
+# Then:   1) PAM U2F → 4) Configure PAM  (run with sudo)
 ```
 
-## Individual Script Usage
+**SSH FIDO2** — your YubiKey becomes your SSH key (private key never leaves the hardware):
+```bash
+bash modules/yubikey/setup.sh
+# Choose: 2) SSH FIDO2
+# Generates ~/.ssh/id_ed25519_sk — add the .pub to GitHub / authorized_keys
+# On a new machine: ssh-keygen -K  to load the resident key from the YubiKey
+```
 
-If you prefer to run individual scripts directly, you can use the following commands:
+**GPG / Git signing** — sign git commits so they show "Verified" on GitHub:
+```bash
+bash modules/yubikey/setup.sh
+# Choose: 3) GPG
+# Configures git to sign all commits with your YubiKey's OpenPGP key
+```
 
-### System Discovery Scripts
+## Bitwarden CLI Setup
 
-Determine the appropriate Arch Linux version to install based on your hardware specifications:
-
-#### For Linux Users
+The `bitwarden` module installs the `bw` CLI, unlocks your vault (optionally using YubiKey OTP as 2FA), and pulls secrets to their correct locations on disk.
 
 ```bash
-# Make the script executable (first-time only)
-chmod +x scripts/determine-arch-ver/linux-os-discovery-updated.sh
-
-# Run the discovery script
-./scripts/determine-arch-ver/linux-os-discovery-updated.sh
+bash modules/bitwarden/setup.sh
 ```
 
-#### For Windows Users
+What it can pull:
+- **SSH private key** — saves to `~/.ssh/<name>`, sets `chmod 600`, optionally adds to `~/.ssh/config`
+- **Environment file** — saves a secure note's contents to a path you specify (e.g. `~/.env`)
 
-```powershell
-# Open PowerShell as Administrator
-# You may need to change execution policy
-Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process
+Prerequisites:
+- A Bitwarden account with your secrets stored as secure notes or SSH key items
+- (Optional) YubiKey OTP configured as a 2FA method in your Bitwarden account settings
 
-# Run the discovery script
-.\scripts\determine-arch-ver\windows-os-discovery-updated.ps1
-```
+## Utility Scripts
 
-These scripts analyze your system hardware and provide:
-- An immediate recommendation for which Arch Linux version to install
-- Custom installation notes specific to your hardware
+| Script | What it does |
+|--------|-------------|
+| `scripts/bootable-usb/arch-usb-creator.sh` | Create a bootable Arch Linux USB |
+| `scripts/determine-arch-ver/linux-os-discovery-updated.sh` | Detect hardware and recommend Arch version |
+| `scripts/install/arch-install-script.sh` | Full Arch Linux install (run from live env) |
+| `scripts/disk-encryption/encrypt-disk.sh` | Disk encryption setup |
+| `scripts/import-root-ca/import-root-ca.sh` | Import a root CA certificate |
+| `scripts/setup-wireguard.sh` | WireGuard VPN setup |
 
-For detailed usage and requirements, refer to `scripts/determine-arch-ver/README.md`.
+## Adding a New Module
 
-### Bootable USB Creation
-
-Create a bootable Arch Linux USB drive:
-
-```bash
-# Make the script executable (first-time only)
-chmod +x scripts/bootable-usb/arch-usb-creator.sh
-
-# Run the USB creator
-sudo ./scripts/bootable-usb/arch-usb-creator.sh
-```
-
-Key features:
-- Select specific Arch Linux version
-- Choose CPU architecture (x86_64, ARM64, ARM32)
-- Automatic ISO download and verification
-- Detailed system compatibility options
-
-⚠️ **Warning**: The script will ERASE all data on the selected USB drive.
-
-For detailed usage and requirements, refer to `scripts/bootable-usb/README.md`.
-
-### Installation Script
-
-A comprehensive Arch Linux installation script is provided to automate the setup of a development environment.
-
-```bash
-# Make the script executable (first-time only)
-chmod +x scripts/install/arch-install-script.sh
-
-# Run the installation script
-sudo ./scripts/install/arch-install-script.sh
-```
-
-### Root CA Setup
-
-Set up a Root Certificate Authority with YubiKey support:
-
-```bash
-# Make the script executable (first-time only)
-chmod +x scripts/setup-root-ca/root-ca-setup.sh
-
-# Run the setup script
-./scripts/setup-root-ca/root-ca-setup.sh
-```
-
-## Future Enhancements
-
-This repository will continue to be expanded to include:
-- More comprehensive system configuration scripts
-- Enhanced dotfiles and configuration management
-- Additional system utility scripts
-- Expanded support for development environments
-- Improved hardware detection and compatibility scripts
-
-## Contributing
-
-Feel free to submit pull requests or suggest improvements to these scripts.
-
-## License
-
-This project is open source and available under the [MIT License](LICENSE).
+See [MODULES.md](MODULES.md) for the module template and conventions.
