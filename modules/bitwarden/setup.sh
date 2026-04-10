@@ -15,6 +15,37 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM
 
+_status_bw_installed() {
+    if pacman -Qq bitwarden-cli &>/dev/null 2>&1; then
+        echo "[✓ installed]"
+    else
+        echo "[✗ not installed]"
+    fi
+}
+
+_status_bw_auth() {
+    if ! command -v bw &>/dev/null; then
+        echo "[? bw not installed]"; return
+    fi
+    local s=""
+    s=$(bw status 2>/dev/null | grep -o '"status":"[^"]*"' | cut -d'"' -f4 || true)
+    case "$s" in
+        unlocked)        echo "[✓ unlocked]" ;;
+        locked)          echo "[~ locked]" ;;
+        *)               echo "[✗ not logged in]" ;;
+    esac
+}
+
+show_status_summary() {
+    log_section "Bitwarden Status"
+    local s_installed s_auth
+    s_installed=$(_status_bw_installed)
+    s_auth=$(_status_bw_auth)
+    echo "  CLI installed:  ${s_installed}"
+    echo "  Vault auth:     ${s_auth}"
+    echo ""
+}
+
 cmd_install() {
     install_pkg bitwarden-cli aur
 }
@@ -137,6 +168,7 @@ show_pull_menu() {
     done
 }
 
+show_status_summary
 cmd_install
 cmd_login
 show_pull_menu

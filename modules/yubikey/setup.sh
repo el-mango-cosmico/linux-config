@@ -132,6 +132,25 @@ _u2f_setup_pam() {
     log_warn "IMPORTANT: Open a new terminal and test 'sudo echo ok' before closing this session."
 }
 
+_status_pam_u2f() {
+    local count pam_active
+    count=$(_key_count)
+    if grep -q 'pam_u2f.so' "$PAM_SUDO" 2>/dev/null; then
+        pam_active=1
+    else
+        pam_active=0
+    fi
+    if [[ "$count" -gt 0 && "$pam_active" -eq 1 ]]; then
+        echo "[✓ ${count} key(s), PAM active]"
+    elif [[ "$count" -gt 0 && "$pam_active" -eq 0 ]]; then
+        echo "[~ ${count} key(s), PAM not set]"
+    elif [[ "$count" -eq 0 && "$pam_active" -eq 1 ]]; then
+        echo "[~ 0 keys, PAM active]"
+    else
+        echo "[✗ not configured]"
+    fi
+}
+
 cmd_pam_u2f() {
     while true; do
         log_section "PAM U2F"
@@ -195,6 +214,27 @@ cmd_ssh_fido2() {
         fi
     fi
 }
+_status_ssh_fido2() {
+    local key_found=0 config_found=0
+    if [[ -f "$HOME/.ssh/id_ed25519_sk" ]]; then
+        key_found=1
+    else
+        local sk_keys
+        sk_keys=$(ls "$HOME/.ssh/"*.pub 2>/dev/null | xargs grep -ql 'sk-ssh-ed25519' 2>/dev/null || true)
+        [[ -n "$sk_keys" ]] && key_found=1
+    fi
+    if [[ -f "$HOME/.ssh/config" ]] && grep -q 'IdentityFile.*sk' "$HOME/.ssh/config" 2>/dev/null; then
+        config_found=1
+    fi
+    if [[ "$key_found" -eq 1 && "$config_found" -eq 1 ]]; then
+        echo "[✓ id_ed25519_sk]"
+    elif [[ "$key_found" -eq 1 ]]; then
+        echo "[~ key exists, no ssh/config entry]"
+    else
+        echo "[✗ not configured]"
+    fi
+}
+
 cmd_gpg() {
     log_section "GPG / Git Signing Setup"
     install_pkg gnupg
@@ -256,14 +296,37 @@ cmd_gpg() {
     echo "    gpg --armor --export $key_id"
 }
 
+_status_gpg() {
+    if ! command -v git &>/dev/null || ! command -v gpg &>/dev/null; then
+        echo "[? unknown]"; return
+    fi
+    local gpgsign sigkey
+    gpgsign=$(git config --global commit.gpgsign 2>/dev/null || true)
+    sigkey=$(git config --global user.signingkey 2>/dev/null || true)
+    if [[ "$gpgsign" == "true" && -n "$sigkey" ]]; then
+        echo "[✓ key ${sigkey:0:16}]"
+    elif [[ "$gpgsign" == "true" ]]; then
+        echo "[~ gpgsign on, no key set]"
+    elif [[ -n "$sigkey" ]]; then
+        echo "[~ key set, gpgsign off]"
+    else
+        echo "[✗ not configured]"
+    fi
+}
+
 show_menu() {
     while true; do
+        local s_pam s_ssh s_gpg
+        s_pam=$(_status_pam_u2f)
+        s_ssh=$(_status_ssh_fido2)
+        s_gpg=$(_status_gpg)
+
         log_section "YubiKey Setup"
-        echo "  1) PAM U2F      — register YubiKey for sudo / login"
-        echo "  2) SSH FIDO2    — generate resident FIDO2 SSH key"
-        echo "  3) GPG          — configure OpenPGP card + git signing"
+        echo "  1) PAM U2F      ${s_pam}"
+        echo "  2) SSH FIDO2    ${s_ssh}"
+        echo "  3) GPG          ${s_gpg}"
         echo "  0) Exit"
-        read -rp "$(echo -e "${YELLOW}Choice: ${NC}")" choice
+        read -rp "$(echo -e "${YELLOW}Choice: ${NC}")" choice || true
         case "$choice" in
             1) cmd_pam_u2f ;;
             2) cmd_ssh_fido2 ;;
