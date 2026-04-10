@@ -55,7 +55,78 @@ cmd_login() {
     log_success "Bitwarden unlocked."
 }
 
-show_pull_menu(){ log_warn "Pull menu: not yet implemented"; }
+_pull_ssh_key() {
+    local item_name=""
+    read -rp "$(echo -e "${YELLOW}Bitwarden item name: ${NC}")" item_name
+
+    local key_content=""
+    key_content=$(bw get notes "$item_name" --session "$BW_SESSION" 2>/dev/null || true)
+
+    if [[ -z "$key_content" ]]; then
+        log_error "Item '$item_name' not found or has no notes content in Bitwarden."
+        return 0
+    fi
+
+    local filename=""
+    read -rp "$(echo -e "${YELLOW}Save as ~/.ssh/: ${NC}")" filename
+    local key_path="$HOME/.ssh/$filename"
+
+    mkdir -p "$HOME/.ssh"
+    chmod 700 "$HOME/.ssh"
+    printf '%s\n' "$key_content" > "$key_path"
+    chmod 600 "$key_path"
+    log_success "SSH key saved to $key_path"
+
+    if confirm "Add IdentityFile entry to ~/.ssh/config?" "n"; then
+        local config="$HOME/.ssh/config"
+        touch "$config"
+        chmod 600 "$config"
+        if ! grep -qF "IdentityFile $key_path" "$config" 2>/dev/null; then
+            printf '\nHost *\n    IdentityFile %s\n' "$key_path" >> "$config"
+            log_success "Added to ~/.ssh/config"
+        else
+            log_info "Already present in ~/.ssh/config"
+        fi
+    fi
+}
+
+_pull_env_file() {
+    local item_name=""
+    read -rp "$(echo -e "${YELLOW}Bitwarden item name: ${NC}")" item_name
+
+    local notes=""
+    notes=$(bw get notes "$item_name" --session "$BW_SESSION" 2>/dev/null || true)
+
+    if [[ -z "$notes" ]]; then
+        log_error "Item '$item_name' not found or has no notes content in Bitwarden."
+        return 0
+    fi
+
+    local dest_path=""
+    read -rp "$(echo -e "${YELLOW}Save to path (e.g. ~/.env): ${NC}")" dest_path
+    dest_path="${dest_path/#\~/$HOME}"
+
+    mkdir -p "$(dirname "$dest_path")"
+    printf '%s\n' "$notes" > "$dest_path"
+    chmod 600 "$dest_path"
+    log_success "Environment file saved to $dest_path"
+}
+
+show_pull_menu() {
+    while true; do
+        log_section "Pull Secrets from Bitwarden"
+        echo "  1) SSH private key"
+        echo "  2) Environment file (secure note)"
+        echo "  0) Done"
+        read -rp "$(echo -e "${YELLOW}Choice: ${NC}")" choice
+        case "$choice" in
+            1) _pull_ssh_key ;;
+            2) _pull_env_file ;;
+            0) break ;;
+            *) log_error "Invalid option" ;;
+        esac
+    done
+}
 
 cmd_install
 cmd_login
