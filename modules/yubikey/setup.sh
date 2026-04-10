@@ -183,7 +183,7 @@ cmd_ssh_fido2() {
     echo ""
     log_info "To load the resident key on a new machine: ssh-keygen -K"
 
-    if confirm "Add IdentityFile entry to ~/.ssh/config?"; then
+    if confirm "Add IdentityFile entry to ~/.ssh/config?" "n"; then
         local config="$HOME/.ssh/config"
         touch "$config"
         chmod 600 "$config"
