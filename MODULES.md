@@ -85,3 +85,5 @@ log_section "Section header"
 | `dotfiles` | Shell, git, and prompt config |
 | `nvim` | Neovim with LazyVim, LSPs, and AI |
 | `kde` | KDE Plasma backup and restore |
+| `yubikey` | PAM U2F, SSH FIDO2, GPG / git signing |
+| `bitwarden` | Install bw CLI, unlock with YubiKey OTP, pull SSH keys + env files |
