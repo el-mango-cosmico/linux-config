@@ -20,7 +20,7 @@ _wait_for_yubikey() {
     read -r
     local attempts=0
     while ! ykman info &>/dev/null; do
-        [[ $attempts -ge 10 ]] && { log_error "YubiKey not detected. Aborting."; exit 1; }
+        [[ $attempts -ge 10 ]] && { log_error "YubiKey not detected. Aborting."; return 1; }
         log_warn "YubiKey not detected, retrying..."
         sleep 1
         attempts=$((attempts + 1))
@@ -50,7 +50,7 @@ _u2f_register() {
         local new_key
         new_key=$(pamu2fcfg -n -o "$PAM_ORIGIN" -i "$PAM_ORIGIN")
         new_key="${new_key#,}"
-        sed -i "s/^\\(${TARGET_USER}:.*\\)$/\\1:${new_key}/" "$U2F_KEYS_FILE"
+        sed -i "s|^\\(${TARGET_USER}:.*\\)$|\\1:${new_key}|" "$U2F_KEYS_FILE"
         log_success "Additional YubiKey registered for '${TARGET_USER}'."
     fi
     chmod 600 "$U2F_KEYS_FILE"
@@ -89,7 +89,7 @@ _u2f_remove() {
         return
     fi
     if ! [[ "$choice" =~ ^[0-9]+$ ]] || [[ "$choice" -lt 1 ]] || [[ "$choice" -gt "$total" ]]; then
-        log_error "Invalid selection."; return 1
+        log_error "Invalid selection."; return 0
     fi
     local line key_data new_entries idx
     line=$(grep "^${TARGET_USER}:" "$U2F_KEYS_FILE")
@@ -116,7 +116,7 @@ _u2f_setup_pam() {
     local u2f_line="auth       sufficient   pam_u2f.so cue origin=${PAM_ORIGIN}"
     log_info "This will add YubiKey as sufficient auth to: $PAM_SUDO, $PAM_SYSTEM"
     log_warn "WARNING: Test sudo in a separate terminal before closing this session."
-    confirm "Proceed?" || { log_warn "Aborted."; return; }
+    confirm "Proceed?" "n" || { log_warn "Aborted."; return; }
     local timestamp; timestamp=$(date +%Y%m%d%H%M%S)
     for pam_file in "$PAM_SUDO" "$PAM_SYSTEM"; do
         if grep -q 'pam_u2f.so' "$pam_file" 2>/dev/null; then
@@ -133,21 +133,23 @@ _u2f_setup_pam() {
 }
 
 cmd_pam_u2f() {
-    log_section "PAM U2F"
-    echo "  1) Register a YubiKey"
-    echo "  2) List registered keys"
-    echo "  3) Remove a key"
-    echo "  4) Configure PAM  (requires sudo)"
-    echo "  0) Back"
-    read -rp "$(echo -e "${YELLOW}Choice: ${NC}")" u2f_choice
-    case "$u2f_choice" in
-        1) _u2f_register ;;
-        2) _u2f_list ;;
-        3) _u2f_remove ;;
-        4) _u2f_setup_pam ;;
-        0) return ;;
-        *) log_error "Invalid option" ;;
-    esac
+    while true; do
+        log_section "PAM U2F"
+        echo "  1) Register a YubiKey"
+        echo "  2) List registered keys"
+        echo "  3) Remove a key"
+        echo "  4) Configure PAM  (requires sudo)"
+        echo "  0) Back"
+        read -rp "$(echo -e "${YELLOW}Choice: ${NC}")" u2f_choice
+        case "$u2f_choice" in
+            1) _u2f_register ;;
+            2) _u2f_list ;;
+            3) _u2f_remove ;;
+            4) _u2f_setup_pam ;;
+            0) return ;;
+            *) log_error "Invalid option" ;;
+        esac
+    done
 }
 
 cmd_ssh_fido2(){ log_warn "SSH FIDO2: not yet implemented"; }
