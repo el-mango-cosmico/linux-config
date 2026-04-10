@@ -212,7 +212,7 @@ cmd_gpg() {
     # Check if a signing key is already on the card
     local sig_line
     sig_line=$(gpg --card-status 2>/dev/null | grep "^Signature key" || true)
-    if echo "$sig_line" | grep -q "\[none\]"; then
+    if echo "$sig_line" | grep -qF '[none]'; then
         log_warn "No signing key found on YubiKey."
         echo "  1) Generate a new key on the card (interactive)"
         echo "  2) Import an existing key from a file"
@@ -225,6 +225,7 @@ cmd_gpg() {
                 gpg --card-edit
                 ;;
             2)
+                local key_file=""
                 read -rp "$(echo -e "${YELLOW}Path to key file: ${NC}")" key_file
                 gpg --import "$key_file"
                 log_info "Now move the key to the card with: gpg --edit-key <KEY_ID> then 'keytocard'"
@@ -238,7 +239,7 @@ cmd_gpg() {
     # Re-read after any changes
     local key_id
     key_id=$(gpg --list-secret-keys --keyid-format LONG 2>/dev/null \
-        | grep "^sec" | head -1 | awk '{print $2}' | cut -d'/' -f2)
+        | grep "^sec" | head -1 | awk '{print $2}' | cut -d'/' -f2 || true)
 
     if [[ -z "$key_id" ]]; then
         log_error "Could not determine key ID. Configure git signing manually with: git config --global user.signingkey <KEY_ID>"
